@@ -290,8 +290,13 @@ def get_job_main_details(job: WebElement, blacklisted_companies: set, rejected_j
     work_style = work_location[work_location.rfind('(')+1:work_location.rfind(')')]
     work_location = work_location[:work_location.rfind('(')].strip()
     
+    # Skip if job title doesn't contain "intern" or "co-op" (when only_internships is enabled)
+    title_lower = title.lower()
+    if only_internships and "intern" not in title_lower and "co-op" not in title_lower and "coop" not in title_lower:
+        print_lg(f'Skipping "{title} | {company}" job (Not an internship/co-op). Job ID: {job_id}!')
+        skip = True
     # Skip if previously rejected due to blacklist or already applied
-    if company in blacklisted_companies:
+    elif company in blacklisted_companies:
         print_lg(f'Skipping "{title} | {company}" job (Blacklisted Company). Job ID: {job_id}!')
         skip = True
     elif job_id in rejected_jobs: 
@@ -458,8 +463,10 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
                     answer = gender
                 elif 'disability' in label: 
                     answer = disability_status
-                elif 'proficiency' in label: 
+                elif 'proficiency' in label:
                     answer = 'Professional'
+                elif 'education' in label or 'degree' in label or 'qualification' in label:
+                    answer = education_level
                 # Add location handling
                 elif any(loc_word in label for loc_word in ['location', 'city', 'state', 'country']):
                     if 'country' in label:
@@ -958,6 +965,13 @@ def apply_to_jobs(search_terms: list[str]) -> None:
                     except Exception as e:
                         print_lg("Failed to calculate the date posted!",e)
 
+                    # Skip jobs older than max_posting_age_hours
+                    if max_posting_age_hours > 0 and isinstance(date_listed, datetime):
+                        hours_since_posted = (datetime.now() - date_listed).total_seconds() / 3600
+                        if hours_since_posted > max_posting_age_hours:
+                            print_lg(f'Skipping "{title} | {company}" job (Posted {hours_since_posted:.1f} hours ago, max is {max_posting_age_hours}h). Job ID: {job_id}!')
+                            skip_count += 1
+                            continue
 
                     description, experience_required, skip, reason, message = get_job_description()
                     if skip:

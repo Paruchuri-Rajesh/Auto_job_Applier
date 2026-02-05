@@ -24,6 +24,9 @@ linkedIn = "https://www.linkedin.com/in/rajeshparuchuri/"       # "https://www.l
 # Valid options are: "U.S. Citizen/Permanent Resident", "Non-citizen allowed to work for any employer", "Non-citizen allowed to work for current employer", "Non-citizen seeking work authorization", "Canadian Citizen/Permanent Resident" or "Other"
 us_citizenship = "Non-citizen allowed to work for current employer"
 
+# What is your highest level of education?
+education_level = "Master's Degree"   # "High School", "Associate's Degree", "Bachelor's Degree", "Master's Degree", "PhD", "Other"
+
 
 
 ## SOME ANNOYING QUESTIONS BY COMPANIES 🫠 ##

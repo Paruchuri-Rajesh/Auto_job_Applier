@@ -172,8 +172,16 @@ def set_search_location() -> None:
     '''
     if search_location.strip():
         try:
+            # Wait for the search page to load
+            buffer(3)
             print_lg(f'Setting search location as: "{search_location.strip()}"')
-            search_location_ele = try_xp(driver, ".//input[@aria-label='City, state, or zip code'and not(@disabled)]", False) #  and not(@aria-hidden='true')]")
+            # Try with WebDriverWait first for reliability
+            try:
+                search_location_ele = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, ".//input[@aria-label='City, state, or zip code' and not(@disabled)]"))
+                )
+            except:
+                search_location_ele = try_xp(driver, ".//input[@aria-label='City, state, or zip code'and not(@disabled)]", False)
             text_input(actions, search_location_ele, search_location, "Search Location")
         except ElementNotInteractableException:
             try_xp(driver, ".//label[@class='jobs-search-box__input-icon jobs-search-box__keywords-label']")
@@ -197,23 +205,46 @@ def apply_filters() -> None:
     try:
         recommended_wait = 1 if click_gap < 1 else 0
 
-        wait.until(EC.presence_of_element_located((By.XPATH, '//button[normalize-space()="All filters"]'))).click()
-        buffer(recommended_wait)
+        # Wait for page to fully load before clicking "All filters"
+        buffer(3)
+
+        # Try multiple selectors for the "All filters" button
+        all_filters_btn = None
+        for xpath in [
+            '//button[normalize-space()="All filters"]',
+            '//button[contains(@aria-label, "filter")]',
+            '//button[contains(normalize-space(), "All filters")]',
+        ]:
+            try:
+                all_filters_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
+                break
+            except:
+                continue
+
+        if all_filters_btn:
+            all_filters_btn.click()
+        else:
+            print_lg("Could not find 'All filters' button!")
+            raise Exception("All filters button not found")
+
+        # Wait for the filter dialog to fully render
+        buffer(2)
 
         wait_span_click(driver, sort_by)
         wait_span_click(driver, date_posted)
         buffer(recommended_wait)
 
-        multi_sel_noWait(driver, experience_level) 
+        # Use multi_sel (with waits) for critical filters instead of multi_sel_noWait
+        multi_sel(driver, experience_level)
         multi_sel_noWait(driver, companies, actions)
         if experience_level or companies: buffer(recommended_wait)
 
-        multi_sel_noWait(driver, job_type)
-        multi_sel_noWait(driver, on_site)
+        multi_sel(driver, job_type)
+        multi_sel(driver, on_site)
         if job_type or on_site: buffer(recommended_wait)
 
         if easy_apply_only: boolean_button_click(driver, actions, "Easy Apply")
-        
+
         multi_sel_noWait(driver, location)
         multi_sel_noWait(driver, industry)
         if location or industry: buffer(recommended_wait)
@@ -228,7 +259,7 @@ def apply_filters() -> None:
 
         wait_span_click(driver, salary)
         buffer(recommended_wait)
-        
+
         multi_sel_noWait(driver, benefits)
         multi_sel_noWait(driver, commitments)
         if benefits or commitments: buffer(recommended_wait)
@@ -241,7 +272,7 @@ def apply_filters() -> None:
             pause_after_filters = False
 
     except Exception as e:
-        print_lg("Setting the preferences failed!")
+        print_lg(f"Setting the preferences failed! ERROR: {e}")
         pyautogui.confirm(f"Faced error while applying filters. Please make sure correct filters are selected, click on show results and click on any button of this dialog, I know it sucks. Can't turn off Pause after search when error occurs! ERROR: {e}", ["Doesn't look good, but Continue XD", "Look's good, Continue"])
         # print_lg(e)
 
